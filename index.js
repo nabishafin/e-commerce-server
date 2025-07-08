@@ -2,7 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const app = express();
 const port = process.env.PORT || 5000;
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 
 // Middleware
@@ -25,20 +25,46 @@ let jobsCollection;
 async function run() {
   try {
     await client.connect();
-    const database = client.db("jobDB");
-    jobsCollection = database.collection("jobs");
 
-    console.log("Connected to MongoDB");
-
-    // Example route to fetch jobs
-    app.get("/jobs", async (req, res) => {
-      const jobs = await jobsCollection.find().toArray();
-      res.send(jobs);
-    });
+    const database = client.db("ecommerceDB");
+    jobsCollection = database.collection("products");
 
     // Root route
     app.get("/", (req, res) => {
       res.send("Job is falling from the sky 🌤️");
+    });
+
+    // Get all products
+    app.get("/products", async (req, res) => {
+      try {
+        const products = await jobsCollection.find({}).toArray();
+        res.status(200).json(products);
+      } catch (error) {
+        console.error("Failed to fetch products:", error);
+        res.status(500).json({ message: "Failed to fetch products" });
+      }
+    });
+
+    // Get single product by ID
+    app.get("/products/:id", async (req, res) => {
+      const id = req.params.id;
+
+      if (!ObjectId.isValid(id)) {
+        return res.status(400).json({ message: "Invalid product ID" });
+      }
+
+      try {
+        const product = await jobsCollection.findOne({ _id: new ObjectId(id) });
+
+        if (!product) {
+          return res.status(404).json({ message: "Product not found" });
+        }
+
+        res.status(200).json(product);
+      } catch (error) {
+        console.error("Failed to fetch product:", error);
+        res.status(500).json({ message: "Failed to fetch product" });
+      }
     });
 
     // Start server after DB connection is confirmed
