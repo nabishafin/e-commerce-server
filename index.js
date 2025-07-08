@@ -1,9 +1,10 @@
 const express = require("express");
 const cors = require("cors");
 const app = express();
-const port = process.env.PORT || 5000;
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
+
+const port = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors());
@@ -12,7 +13,6 @@ app.use(express.json());
 // MongoDB URI
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.dkwhsex.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
-// MongoDB Client
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -26,80 +26,74 @@ let jobsCollection;
 async function run() {
   try {
     await client.connect();
-
     const database = client.db("ecommerceDB");
     jobsCollection = database.collection("products");
 
     // Root route
     app.get("/", (req, res) => {
-      res.send("Job is falling from the sky 🌤️");
+      res.send("Backend server is running 🎉");
     });
 
-    // ✅ Get all products
+    // Get all products
     app.get("/products", async (req, res) => {
       try {
         const products = await jobsCollection.find({}).toArray();
         res.status(200).json(products);
       } catch (error) {
-        console.error("Failed to fetch products:", error);
-        res.status(500).json({ message: "Failed to fetch products" });
+        console.error("Error fetching products:", error);
+        res.status(500).json({ message: "Server error" });
       }
     });
 
-    // ✅ Get single product by ID
+    // Get product by ID
     app.get("/products/:id", async (req, res) => {
       const id = req.params.id;
-
       if (!ObjectId.isValid(id)) {
         return res.status(400).json({ message: "Invalid product ID" });
       }
 
       try {
         const product = await jobsCollection.findOne({ _id: new ObjectId(id) });
-
         if (!product) {
           return res.status(404).json({ message: "Product not found" });
         }
-
         res.status(200).json(product);
       } catch (error) {
-        console.error("Failed to fetch product:", error);
-        res.status(500).json({ message: "Failed to fetch product" });
+        console.error("Error fetching product:", error);
+        res.status(500).json({ message: "Server error" });
       }
     });
 
-    // ✅ Add new product (POST)
+    // Add product
     app.post("/products", async (req, res) => {
       const newProduct = req.body;
-
-      // Optional: validate fields
       const requiredFields = ["name", "price", "image", "category", "description"];
-      const missingFields = requiredFields.filter((field) => !newProduct[field]);
 
+      const missingFields = requiredFields.filter((field) => !newProduct[field]);
       if (missingFields.length > 0) {
         return res.status(400).json({
-          message: `Missing required fields: ${missingFields.join(", ")}`,
+          message: `Missing fields: ${missingFields.join(", ")}`,
         });
       }
 
       try {
         const result = await jobsCollection.insertOne(newProduct);
         res.status(201).json({
-          message: "Product added successfully",
+          message: "Product added",
           insertedId: result.insertedId,
         });
       } catch (error) {
-        console.error("Failed to add product:", error);
-        res.status(500).json({ message: "Failed to add product" });
+        console.error("Error adding product:", error);
+        res.status(500).json({ message: "Server error" });
       }
     });
 
-    // Start server after DB connection
+    // Start server
     app.listen(port, () => {
-      console.log(`App is running on port ${port}`);
+      console.log(`Server is running on port ${port}`);
     });
   } catch (err) {
-    console.error(err);
+    console.error("MongoDB connection error:", err);
   }
 }
 
